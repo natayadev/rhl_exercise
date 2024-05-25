@@ -22,7 +22,7 @@ seleccionar_columnas() {
     awk -F',' '{
         output = ""
         for (i = 1; i <= NF; i++) {
-            if (i == 3 || i == 4 || i == 5 || i == 7 || i == 9) {
+            if (i == 3 || i == 7 || i == 9) {
                 if (output == "") {
                     output = $i
                 } else {
@@ -62,6 +62,8 @@ for file in "$RAW_DIR"/*.txt; do
     
     # Reemplazar el archivo original con el archivo modificado
     mv "$temp_csv_file" "$csv_file"
+
+    rm "$file"
     
     echo "Procesado $file, guardado en $csv_file y solo columnas importantes mantenidas."
 done
