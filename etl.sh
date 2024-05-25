@@ -63,7 +63,7 @@ for file in "$RAW_DIR"/*.txt; do
     # Reemplazar el archivo original con el archivo modificado
     mv "$temp_csv_file" "$csv_file"
     
-    echo "Prosesado $file, guardado en $csv_file y solo columnas importantes mantenidas."
+    echo "Procesado $file, guardado en $csv_file y solo columnas importantes mantenidas."
 done
 
 echo "Todos los archivos han sido procesados, modificados y eliminados de $RAW_DIR."
