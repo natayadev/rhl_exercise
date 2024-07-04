@@ -1,115 +1,155 @@
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 from datetime import datetime
-
 import os
 
-file_covid = "raw_data/covid.csv"
-file_dengue = "raw_data/dengue.csv"
-file_influenza = "raw_data/influenza.csv"
 
-df_covid = pd.read_csv(file_covid)
-df_dengue = pd.read_csv(file_dengue)
-df_influenza = pd.read_csv(file_influenza)
-
-
-# EDA: Analisis exploratorio de datos
-def exploratory_analysis(dataframes):
-    """ Esta función realiza el análisis de datos """
-    print("------INFO------")
-    print(dataframes.info())
-    print("------DESCRIBE------")
-    print(dataframes.describe())
-    print("------DTYPES------")
-    print(dataframes.dtypes)
-
-    # Valores atípicos
-    valores_nulos = dataframes.isna().sum()
-    print("Valores atípicos", valores_nulos)
-
-    # Estadísticas descriptivas
-    media = np.mean(dataframes["Edad"])
-    print("media: ", media)
-    mediana = np.median(dataframes["Edad"])
-    print("mediana: ", mediana)
-    desvio_estandar = np.std(dataframes["Edad"])
-    print("desvio_estandar: ", desvio_estandar)
-
-
-def transform_data(dataframes):
-    """ Esta función realiza la transformación de datos """
-
-    # Cambiar el índice del df
-    dataframes = dataframes.set_index('id')
-
-    # Renombrar los encabezados de las columnas
-    diccionario_columnas = {"first_name": "Nombre",
-                            "last_name": "Apellido",
-                            "email": "Correo",
-                            "phone": "Contacto",
-                            "gender": "Género",
-                            "birth": "Fecha Nac.",
-                            "dengue": "Analisis Dengue",
-                            "covid": "Analisis Covid",
-                            "influenza": "Analisis Influenza",
-                            "date": "Fecha Analisis"}
-    dataframes = dataframes.rename(columns=diccionario_columnas)
-
-    # Cambiar los tipos de columnas
-    dataframes['Fecha Analisis'] = pd.to_datetime(dataframes['Fecha Analisis'])
-    dataframes['Fecha Nac.'] = pd.to_datetime(dataframes['Fecha Nac.'])
-
-    # Eliminar las columnas que no vamos a utilizar
-    lista_cols_a_eliminar = ["Nombre", "Apellido"]
-    dataframes = dataframes.drop(columns=lista_cols_a_eliminar)
-
-    # Eliminar los valores nulos
-    dataframes = dataframes.dropna()
-    print(dataframes.info())
-
-    valores_nulos = dataframes.isna().sum()
-    print("Valores atípicos", valores_nulos)
-
+def read_data(file_paths):
+    """
+    Lee los archivos CSV y devuelve un diccionario de DataFrames.
+    """
+    dataframes = {}
+    for key, path in file_paths.items():
+        dataframes[key] = pd.read_csv(path)
     return dataframes
 
 
-df_dengue = transform_data(df_dengue)
-print(df_dengue.head())
-df_influenza = transform_data(df_influenza)
-print(df_influenza.head())
-df_covid = transform_data(df_covid)
-print(df_covid.head())
+def transform_data(df):
+    """
+    Realiza la transformación de datos sobre un DataFrame.
+    """
+    df = df.set_index('id')
+    diccionario_columnas = {
+        "first_name": "Nombre",
+        "last_name": "Apellido",
+        "email": "Correo",
+        "phone": "Contacto",
+        "gender": "Género",
+        "birth": "Fecha Nac.",
+        "dengue": "Analisis Dengue",
+        "covid": "Analisis Covid",
+        "influenza": "Analisis Influenza",
+        "date": "Fecha Analisis"
+    }
+    df = df.rename(columns=diccionario_columnas)
+    df['Fecha Analisis'] = pd.to_datetime(df['Fecha Analisis'])
+    df['Fecha Nac.'] = pd.to_datetime(df['Fecha Nac.'])
+    df = df.drop(columns=["Nombre", "Apellido"], errors='ignore')
+    df = df.dropna()
 
-
-def concat_data(df_dengue, df_influenza, df_covid):
-    dataframe = pd.concat([df_dengue, df_influenza, df_covid])
-
-    return dataframe
-
-
-dataframe = concat_data(df_dengue, df_influenza, df_covid)
-
-
-def calcular_edad(dataframe):
     today = datetime.today()
+    df["Edad"] = today.year - df["Fecha Nac."].dt.year
 
-    dataframe["Edad"] = dataframe["Fecha Nac."].apply(
-        lambda x: today.year - x.year)
-    print(dataframe.sample(25))
-
-    return dataframe
+    return df
 
 
-dataframe = calcular_edad(dataframe)
+def concat_data(dfs):
+    """
+    Concatena múltiples DataFrames en uno solo y coloca 'Fecha Analisis' y 'Edad' al final.
+    """
+    combined_df = pd.concat(dfs, ignore_index=True)
 
-exploratory_analysis(dataframe)
+    # Reorganizar columnas para que 'Fecha Analisis' y 'Edad' sean las últimas
+    cols = [col for col in combined_df.columns if col not in [
+        "Fecha Analisis", "Edad"]] + ["Fecha Analisis", "Edad"]
+    combined_df = combined_df[cols]
+
+    return combined_df
 
 
-def load_processed_data(dataframe):
-    if not os.path.exists("processed_data"):
-        os.makedirs("processed_data")
+def exploratory_analysis(df_combined, output_dir):
+    """
+    Realiza un análisis exploratorio de datos sobre el DataFrame combinado y guarda los gráficos en el directorio especificado.
+    """
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
 
-    dataframe.to_csv("processed_data/combined_data.csv")
+    # Añadir líneas divisorias y saltos de línea en los prints
+    separator = "-" * 40
+    print(f"\n{separator}\nINFO\n{separator}")
+    print(df_combined.info())
+
+    print(f"\n{separator}\nDESCRIBE\n{separator}")
+    print(df_combined.describe())
+
+    print(f"\n{separator}\nDTYPES\n{separator}")
+    print(df_combined.dtypes)
+
+    print(f"\n{separator}\nNULL VALUES\n{separator}")
+    print(df_combined.isna().sum())
+
+# Estilo visual para los gráficos
+    style_params = {
+        'marker': '*',
+        'linestyle': '--',
+        'grid_color': 'tab:grey',
+    }
+
+    # Gráfico de barras para la distribución por género
+    plt.figure(figsize=(8, 6))
+    df_combined['Género'].value_counts().plot(
+        kind='bar', color='pink', edgecolor='black')
+    plt.title('Distribución por Género')
+    plt.xlabel('Género')
+    plt.ylabel('Cantidad de Pacientes')
+    plt.grid(color=style_params['grid_color'],
+             linestyle=style_params['linestyle'], alpha=0.6)
+    plt.savefig(os.path.join(output_dir, 'distribucion_genero.png'))
+    plt.close()
+
+    # Gráfico de barras para la cantidad de pacientes con cada tipo de análisis
+    plt.figure(figsize=(8, 6))
+    df_combined[['Analisis Influenza', 'Analisis Dengue', 'Analisis Covid']].sum(
+    ).plot(kind='bar', color=['violet', 'orange', 'pink'], edgecolor='black')
+    plt.title('Cantidad de Pacientes por Tipo de Análisis')
+    plt.xlabel('Tipo de Análisis')
+    plt.ylabel('Cantidad de Pacientes')
+    plt.grid(color=style_params['grid_color'],
+             linestyle=style_params['linestyle'], alpha=0.6)
+    plt.savefig(os.path.join(output_dir, 'cantidad_pacientes.png'))
+    plt.close()
+
+    # Histograma de edades
+    plt.figure(figsize=(8, 6))
+    plt.hist(df_combined['Edad'], bins=10, edgecolor='black', color='purple')
+    plt.title('Distribución de Edades')
+    plt.xlabel('Edad')
+    plt.ylabel('Cantidad de Pacientes')
+    plt.grid(color=style_params['grid_color'],
+             linestyle=style_params['linestyle'], alpha=0.6)
+    plt.savefig(os.path.join(output_dir, 'distribucion_edades.png'))
+    plt.close()
 
 
-load_processed_data(dataframe)
+def load_processed_data(df, output_path):
+    """
+    Guarda el DataFrame procesado en un archivo CSV.
+    """
+    if not os.path.exists(os.path.dirname(output_path)):
+        os.makedirs(os.path.dirname(output_path))
+    df.to_csv(output_path, index=False)
+
+
+# Rutas de archivos
+file_paths = {
+    "covid": "raw_data/covid.csv",
+    "dengue": "raw_data/dengue.csv",
+    "influenza": "raw_data/influenza.csv"
+}
+
+# Leer datos
+dataframes = read_data(file_paths)
+
+# Transformación de datos
+transformed_dataframes = {name: transform_data(
+    df) for name, df in dataframes.items()}
+
+# Concatenar DataFrames transformados
+df_combined = concat_data(transformed_dataframes.values())
+
+# EDA: Análisis exploratorio de datos combinados y guardar gráficos
+exploratory_analysis(df_combined, "dataviz")
+
+# Guardar datos procesados
+load_processed_data(df_combined, "processed_data/combined_data.csv")
