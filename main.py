@@ -147,6 +147,7 @@ transformed_dataframes = {name: transform_data(
 
 # Concatenar DataFrames transformados
 df_combined = concat_data(transformed_dataframes.values())
+print(df_combined)
 
 # EDA: Análisis exploratorio de datos combinados y guardar gráficos
 exploratory_analysis(df_combined, "dataviz")
